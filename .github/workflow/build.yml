@@ -1,0 +1,36 @@
+name: Build macOS App
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Swift Package
+        run: swift build -c release --arch arm64 --arch x86_64
+
+      - name: Package into .app bundle
+        run: |
+          APP_DIR="LoveCat.app"
+          mkdir -p "$APP_DIR/Contents/MacOS"
+          mkdir -p "$APP_DIR/Contents/Resources"
+          
+          cp Info.plist "$APP_DIR/Contents/Info.plist"
+          cp .build/apple/Products/Release/LoveCat "$APP_DIR/Contents/MacOS/LoveCat"
+          cp -R .build/apple/Products/Release/LoveCat_LoveCat.bundle "$APP_DIR/Contents/Resources/"
+          
+          codesign --force --deep --sign - "$APP_DIR"
+          zip -r LoveCat-macOS.zip "$APP_DIR"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LoveCat-macOS
+          path: LoveCat-macOS.zip
